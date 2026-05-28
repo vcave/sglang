@@ -34,6 +34,7 @@ from sglang.srt.disaggregation.common.utils import (
 from sglang.srt.disaggregation.utils import DisaggregationMode
 from sglang.srt.environ import envs
 from sglang.srt.server_args import ServerArgs
+from sglang.srt.utils import is_hip
 
 try:
     from nixl._bindings import (
@@ -202,14 +203,25 @@ class NixlKVManager(CommonKVManager):
         is_mla_backend: Optional[bool] = False,
     ):
         super().__init__(args, disaggregation_mode, server_args, is_mla_backend)
-        try:
-            from nixl._api import nixl_agent, nixl_agent_config
-        except ImportError as e:
-            raise ImportError(
-                "Please install NIXL by following the instructions at "
-                "https://github.com/ai-dynamo/nixl/blob/main/README.md "
-                "to run SGLang with NixlTransferEngine."
-            ) from e
+        # Conditional import
+        if is_hip():
+            try:
+                from rixl._api import nixl_agent, nixl_agent_config
+            except ImportError as e:
+                raise ImportError(
+                    "Please install ROCm RIXL by following the instructions at "
+                    "https://github.com/ROCm/RIXL "
+                    "to run SGLang with NixlTransferEngine."
+                ) from e
+        else:
+            try:
+                from nixl._api import nixl_agent, nixl_agent_config
+            except ImportError as e:
+                raise ImportError(
+                    "Please install NIXL by following the instructions at "
+                    "https://github.com/ai-dynamo/nixl/blob/main/README.md "
+                    "to run SGLang with NixlTransferEngine."
+                ) from e
 
         backend = envs.SGLANG_DISAGGREGATION_NIXL_BACKEND.get()
         num_threads = 8 if disaggregation_mode == DisaggregationMode.PREFILL else 0
